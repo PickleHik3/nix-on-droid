@@ -150,6 +150,11 @@
           description = "Minimal example of Nix-on-Droid system config with home-manager.";
         };
 
+        launcher = {
+          path = ./templates/launcher;
+          description = "Termux Launcher opinionated shell: fish, oh-my-posh, LazyVim, eza, zoxide, yazi, fastfetch, timg.";
+        };
+
         advanced = {
           path = ./templates/advanced;
           description = "Advanced example of Nix-on-Droid system config with home-manager.";
