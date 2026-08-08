@@ -69,6 +69,7 @@ in
         pkgs.bashInteractive
         pkgs.cacert
         pkgs.coreutils
+        pkgs.curl # launcherctl/tai CLI clients talk to the launcher API with curl
         pkgs.less # since nix tools really want a pager available, #27
         config.nix.package
       ];
