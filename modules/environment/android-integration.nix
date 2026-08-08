@@ -22,7 +22,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide an `am` (activity manager) command.
         Is not guaranteed to be a real deal, could be of limited compatibility
         with real `am` (like `termux-am`).
@@ -33,7 +33,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide a `termux-open` command
         that opens files or urls in external apps
         (uses `com.termux.app.TermuxOpenReceiver`).
@@ -44,7 +44,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide a `termux-open-url` command
         that opens files or urls in external apps
         (uses `android.intent.action.VIEW`).
@@ -55,7 +55,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide a `termux-setup-storage` command
         that makes the app request storage permission,
         and then creates a $HOME/storage directory with symlinks to storage.
@@ -66,7 +66,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide a `termux-reload-settings` command
         which applies changes to font, colorscheme or terminal
         without the need to close all the sessions.
@@ -77,7 +77,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide a `termux-wake-lock` command
         that tones down Android power saving measures.
         This is the same action that's available from the notification.
@@ -88,7 +88,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide a `termux-wake-unlock` command
         that undoes the effect of the `termux-wake-lock` one.
       '';
@@ -98,7 +98,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide an `xdg-open` alias to `termux-open` command.
       '';
     };
@@ -107,7 +107,7 @@ in
       type = lib.types.bool;
       default = false;
       example = "true";
-      description = lib.mdDoc ''
+      description = ''
         Provide several more unsupported and untested commands.
         For testing and for brave souls only.
       '';

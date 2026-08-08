@@ -5,7 +5,7 @@
 with lib;
 
 let
-  defaultNixpkgsBranch = "nixos-24.05";
+  defaultNixpkgsBranch = "nixos-26.05";
   defaultNixOnDroidBranch = "release-24.05";
 
   defaultNixpkgsChannel = "https://nixos.org/channels/${defaultNixpkgsBranch}";
