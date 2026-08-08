@@ -8,6 +8,7 @@
     fish
     oh-my-posh
     # files & navigation
+    ncurses  # clear/tput for the fish greeting and cursor helpers
     eza
     zoxide
     yazi
