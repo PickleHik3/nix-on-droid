@@ -1,0 +1,240 @@
+diff --git a/src/syscall/enter.c b/src/syscall/enter.c
+index 1b382a7..7930f86 100644
+--- a/src/syscall/enter.c
++++ b/src/syscall/enter.c
+@@ -37,6 +37,7 @@
+ #include "ptrace/ptrace.h"
+ #include "ptrace/wait.h"
+ #include "syscall/heap.h"
++#include "syscall/termios2.h"
+ #include "extension/extension.h"
+ #include "execve/execve.h"
+ #include "tracee/tracee.h"
+@@ -611,12 +612,75 @@ int translate_syscall_enter(Tracee *tracee)
+ 		break;
+ 
+ #ifdef __ANDROID__
+-	case PR_ioctl:
++	case PR_ioctl: {
++		word_t request = peek_reg(tracee, CURRENT, SYSARG_2);
++
+ 		/* Using literal value because Termux build system patches TCSAFLUSH */
+-		if (peek_reg(tracee, CURRENT, SYSARG_2) == TCSETS + 2 /* + TCSAFLUSH */) {
++		if (request == TCSETS + 2 /* + TCSAFLUSH */) {
+ 			poke_reg(tracee, SYSARG_2, TCSETS + TCSANOW);
++			break;
++		}
++
++		/* See termios2.h: Android SELinux denies the termios2
++		 * ioctls on application ptys; translate them to the
++		 * legacy ones.  */
++		if (request == PROOT_TCGETS2) {
++			/* The struct is expanded during sysexit.  */
++			poke_reg(tracee, SYSARG_2, PROOT_TCGETS);
++			break;
++		}
++
++		if (request == PROOT_TCSETS2
++		    || request == PROOT_TCSETSW2
++		    || request == PROOT_TCSETSF2) {
++			struct proot_ktermios2 termios2;
++			struct proot_ktermios termios;
++			word_t address;
++
++			status = read_data(tracee, &termios2,
++					peek_reg(tracee, CURRENT, SYSARG_3),
++					sizeof(termios2));
++			if (status < 0)
++				break;
++
++			memset(&termios, 0, sizeof(termios));
++			termios.c_iflag = termios2.c_iflag;
++			termios.c_oflag = termios2.c_oflag;
++			termios.c_cflag = termios2.c_cflag;
++			termios.c_lflag = termios2.c_lflag;
++			termios.c_line  = termios2.c_line;
++			memcpy(termios.c_cc, termios2.c_cc, PROOT_KNCCS);
++
++			/* The legacy ioctl can't carry arbitrary baud
++			 * rates; degrade them to the pty default.  */
++			if ((termios.c_cflag & PROOT_KCBAUD) == PROOT_KBOTHER) {
++				termios.c_cflag &= ~PROOT_KCBAUD;
++				termios.c_cflag |= 0x0f; /* B38400 */
++			}
++			if ((termios.c_cflag & PROOT_KCIBAUD) == (PROOT_KBOTHER << 16))
++				termios.c_cflag &= ~PROOT_KCIBAUD; /* = output rate */
++
++			address = alloc_mem(tracee, sizeof(termios));
++			if (address == 0) {
++				status = -ENOMEM;
++				break;
++			}
++
++			status = write_data(tracee, address, &termios, sizeof(termios));
++			if (status < 0)
++				break;
++
++			poke_reg(tracee, SYSARG_3, address);
++			/* TCSETSF2 is demoted to TCSETS, matching the
++			 * TCSAFLUSH workaround above.  */
++			poke_reg(tracee, SYSARG_2,
++				request == PROOT_TCSETSW2 ? PROOT_TCSETSW
++							  : PROOT_TCSETS);
++			break;
+ 		}
++
+ 		break;
++	}
+ #endif
+ 	
+ 	case PR_memfd_create:
+diff --git a/src/syscall/exit.c b/src/syscall/exit.c
+index df41084..ad8b276 100644
+--- a/src/syscall/exit.c
++++ b/src/syscall/exit.c
+@@ -32,6 +32,7 @@
+ #include "syscall/socket.h"
+ #include "syscall/chain.h"
+ #include "syscall/heap.h"
++#include "syscall/termios2.h"
+ #include "syscall/rlimit.h"
+ #include "execve/execve.h"
+ #include "tracee/tracee.h"
+@@ -549,6 +550,44 @@ void translate_syscall_exit(Tracee *tracee)
+ 				(int) peek_reg(tracee, CURRENT, SYSARG_RESULT) == -EACCES) {
+ 			poke_reg(tracee, SYSARG_RESULT, -EOPNOTSUPP);
+ 		}
++
++#ifdef __ANDROID__
++		/* See termios2.h: TCGETS2 was translated to TCGETS during
++		 * sysenter; expand the legacy struct the kernel filled in
++		 * into the termios2 layout the tracee expects.  */
++		if (peek_reg(tracee, ORIGINAL, SYSARG_2) == PROOT_TCGETS2 &&
++				(int) peek_reg(tracee, CURRENT, SYSARG_RESULT) == 0) {
++			struct proot_ktermios termios;
++			struct proot_ktermios2 termios2;
++			word_t address;
++
++			address = peek_reg(tracee, ORIGINAL, SYSARG_3);
++
++			status = read_data(tracee, &termios, address, sizeof(termios));
++			if (status < 0) {
++				poke_reg(tracee, SYSARG_RESULT, (word_t) status);
++				goto end;
++			}
++
++			memset(&termios2, 0, sizeof(termios2));
++			termios2.c_iflag = termios.c_iflag;
++			termios2.c_oflag = termios.c_oflag;
++			termios2.c_cflag = termios.c_cflag;
++			termios2.c_lflag = termios.c_lflag;
++			termios2.c_line  = termios.c_line;
++			memcpy(termios2.c_cc, termios.c_cc, PROOT_KNCCS);
++			termios2.c_ospeed = proot_termios_baud(termios.c_cflag);
++			if ((termios.c_cflag & PROOT_KCIBAUD) != 0)
++				termios2.c_ispeed = proot_termios_baud(
++					(termios.c_cflag >> 16) & PROOT_KCBAUD);
++			else
++				termios2.c_ispeed = termios2.c_ospeed;
++
++			status = write_data(tracee, address, &termios2, sizeof(termios2));
++			if (status < 0)
++				poke_reg(tracee, SYSARG_RESULT, (word_t) status);
++		}
++#endif
+ 		goto end;
+ 
+ 	default:
+diff --git a/src/syscall/termios2.h b/src/syscall/termios2.h
+new file mode 100644
+index 0000000..8eb0a3e
+--- /dev/null
++++ b/src/syscall/termios2.h
+@@ -0,0 +1,87 @@
++/* -*- c-set-style: "K&R"; c-basic-offset: 8 -*-
++ *
++ * Translation of the termios2 ioctls to their legacy counterparts.
++ *
++ * glibc >= 2.41 implements tcgetattr(3)/tcsetattr(3) with the termios2
++ * ioctls (TCGETS2, TCSETS2, TCSETSW2, TCSETSF2) to support arbitrary
++ * baud rates.  Android's SELinux ioctl allow-list for application
++ * devpts nodes (untrusted_app_all_devpts) only covers the legacy tty
++ * ioctls, so the termios2 ones fail with EACCES.  This breaks every
++ * glibc >= 2.41 program that touches a terminal, including the Nix
++ * build daemon's pseudoterminal setup.
++ *
++ * PRoot translates the requests to the legacy ioctls and converts the
++ * structs.  The only loss is arbitrary (BOTHER) baud rates, which are
++ * meaningless on pseudoterminals.
++ */
++
++#ifndef TERMIOS2_H
++#define TERMIOS2_H
++
++#include <stdint.h>
++
++/* Literal values (asm-generic, used by arm64); bionic headers may not
++ * expose the termios2 ioctls.  */
++#define PROOT_TCGETS   0x5401
++#define PROOT_TCSETS   0x5402
++#define PROOT_TCSETSW  0x5403
++#define PROOT_TCGETS2  0x802c542a
++#define PROOT_TCSETS2  0x402c542b
++#define PROOT_TCSETSW2 0x402c542c
++#define PROOT_TCSETSF2 0x402c542d
++
++#define PROOT_KNCCS    19
++#define PROOT_KCBAUD   0x0000100f
++#define PROOT_KCBAUDEX 0x00001000
++#define PROOT_KBOTHER  0x00001000
++#define PROOT_KCIBAUD  0x100f0000
++
++/* Kernel struct termios (asm-generic/termbits.h), 36 bytes.  */
++struct proot_ktermios {
++	uint32_t c_iflag;
++	uint32_t c_oflag;
++	uint32_t c_cflag;
++	uint32_t c_lflag;
++	uint8_t  c_line;
++	uint8_t  c_cc[PROOT_KNCCS];
++};
++
++/* Kernel struct termios2 (asm-generic/termbits.h), 44 bytes.  */
++struct proot_ktermios2 {
++	uint32_t c_iflag;
++	uint32_t c_oflag;
++	uint32_t c_cflag;
++	uint32_t c_lflag;
++	uint8_t  c_line;
++	uint8_t  c_cc[PROOT_KNCCS];
++	uint32_t c_ispeed;
++	uint32_t c_ospeed;
++};
++
++/* Decode the CBAUD bits of c_cflag into a baud rate for the
++ * c_ispeed/c_ospeed fields of struct termios2.  BOTHER (arbitrary
++ * rate) can't reach here through the legacy ioctls; fall back to the
++ * pseudoterminal default.  */
++static inline uint32_t proot_termios_baud(uint32_t cflag)
++{
++	static const uint32_t table[16] = {
++		0, 50, 75, 110, 134, 150, 200, 300,
++		600, 1200, 1800, 2400, 4800, 9600, 19200, 38400,
++	};
++	static const uint32_t table_ex[16] = {
++		0 /* BOTHER */, 57600, 115200, 230400,
++		460800, 500000, 576000, 921600,
++		1000000, 1152000, 1500000, 2000000,
++		2500000, 3000000, 3500000, 4000000,
++	};
++	uint32_t value;
++
++	if (cflag & PROOT_KCBAUDEX)
++		value = table_ex[cflag & 0x0f];
++	else
++		value = table[cflag & 0x0f];
++
++	return value != 0 ? value : 38400;
++}
++
++#endif /* TERMIOS2_H */
