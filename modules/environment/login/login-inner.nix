@@ -149,7 +149,7 @@ writeText "login-inner" ''
   else
     echo "User profile is missing or incomplete (a first-time setup may have failed)."
     echo "Re-running the Nix-on-Droid setup..."
-    touch /etc/UNINTIALISED
+    : > /etc/UNINTIALISED
     exec /bin/sh /usr/lib/login-inner "$@"
   fi
 
