@@ -143,14 +143,18 @@ writeText "login-inner" ''
 
   # A failed or interrupted first-time setup leaves ~/.nix-profile dangling;
   # sourcing it unguarded under `set -e` would kill every future session and
-  # soft-brick the install. Fall back to re-running the setup instead.
+  # soft-brick the install.
   if [ -e "${config.user.home}/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then
     . "${config.user.home}/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh"
   else
     echo "User profile is missing or incomplete (a first-time setup may have failed)."
-    echo "Re-running the Nix-on-Droid setup..."
-    : > /etc/UNINTIALISED
-    exec /bin/sh /usr/lib/login-inner "$@"
+    ${if config.build.initialBuild then ''
+      echo "Re-running the Nix-on-Droid setup..."
+      : > /etc/UNINTIALISED
+      exec /bin/sh /usr/lib/login-inner "$@"
+    '' else ''
+      echo "Continuing with a limited shell; run 'nix-on-droid switch' to repair."
+    ''}
   fi
 
   ${lib.optionalString config.build.initialBuild ''
