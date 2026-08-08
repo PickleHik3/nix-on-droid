@@ -70,6 +70,7 @@ in
         pkgs.cacert
         pkgs.coreutils
         pkgs.curl # launcherctl/tai CLI clients talk to the launcher API with curl
+        pkgs.gnused # launcherctl/tai scripts parse endpoint files and escape JSON with sed
         pkgs.less # since nix tools really want a pager available, #27
         config.nix.package
       ];
