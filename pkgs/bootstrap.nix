@@ -7,7 +7,11 @@ runCommand "bootstrap" { } ''
   mkdir --parents $out/nix/var/nix/{profiles,gcroots}/per-user/nix-on-droid
 
   cp --recursive ${nixDirectory}/store $out/nix/store
-  cp --recursive ${nixDirectory}/var $out/nix/var
+  # $out/nix/var already exists (per-user dirs above), so copying the
+  # directory itself would nest it as nix/var/var and ship the store
+  # database where nix never finds it — every shipped path then counts
+  # as invalid and first boot only works if all of them are substitutable.
+  cp --recursive ${nixDirectory}/var/. $out/nix/var/
   chmod --recursive u+w $out/nix
 
   ln --symbolic ${initialPackageInfo.bash}/bin/sh $out/bin/sh
