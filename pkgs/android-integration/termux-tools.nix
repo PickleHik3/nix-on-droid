@@ -25,8 +25,8 @@ stdenvNoCC.mkDerivation rec {
   patches = [ ./termux-tools.patch ];
   postPatch = ''
     substituteInPlace scripts/termux-setup-storage.in \
-      --replace @TERMUX_HOME@ /data/data/com.termux.nix/files/home/ \
-      --replace @TERMUX_APP_PACKAGE@ com.termux.nix
+      --replace @TERMUX_HOME@ /data/data/com.termux.launcher.nix/files/home/ \
+      --replace @TERMUX_APP_PACKAGE@ com.termux.launcher.nix
     substituteInPlace scripts/termux-open.in \
       --replace 'getopt ' '${getopt}/bin/getopt '
     substituteInPlace \
@@ -34,9 +34,9 @@ stdenvNoCC.mkDerivation rec {
       scripts/termux-wake-lock.in \
       scripts/termux-wake-unlock.in \
       --replace @TERMUX_APP_PACKAGE@.app com.termux.app \
-      --replace @TERMUX_APP_PACKAGE@ com.termux.nix
+      --replace @TERMUX_APP_PACKAGE@ com.termux.launcher.nix
     substituteInPlace scripts/termux-reload-settings.in \
-      --replace @TERMUX_APP_PACKAGE@ com.termux.nix
+      --replace @TERMUX_APP_PACKAGE@ com.termux.launcher.nix
     ${gnused}/bin/sed -i 's|^am |${termux-am}/bin/am |' scripts/*
 
     rm -r doc  # manpage is half misleading, pulling pandoc is not worth it
