@@ -1,5 +1,11 @@
 set -g fish_greeting ""
 
+# Non-login shells (sshd, scripts) arrive without the profile on PATH — everything
+# below assumes coreutils. No-op where the profile does not exist (apt editions).
+if test -d "$HOME/.nix-profile/bin"; and not contains -- "$HOME/.nix-profile/bin" $PATH
+    fish_add_path --prepend "$HOME/.nix-profile/bin"
+end
+
 set -gx TMPDIR "$HOME/.tmp"
 mkdir -p "$TMPDIR"
 

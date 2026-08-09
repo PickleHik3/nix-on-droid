@@ -37,12 +37,16 @@ in
     fi
 
     # StrictModes off: Android home dir permissions never look canonical to sshd.
+    # Redirect all stdio: the daemonized server otherwise keeps the caller's pty
+    # open, which wedges piped/scripted invocations. Startup errors land in the log.
     ${sshd} -f /dev/null -p "$port" -h "${hostKey}" \
       -o "PidFile=${runDir}/pid" \
       -o UsePAM=no \
       -o PasswordAuthentication=no \
-      -o StrictModes=no
+      -o StrictModes=no \
+      < /dev/null >> "${runDir}/log" 2>&1
     rc=$?
+    [ $rc -eq 0 ] || cat "${runDir}/log" >&2
     if [ $rc -eq 0 ]; then
       $quiet || echo "sshd listening on port $port"
     else
