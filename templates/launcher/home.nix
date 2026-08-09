@@ -25,7 +25,10 @@
     gcc
     gnumake
     unzip
-  ];
+  ]
+  # sshd lifecycle commands (sshd-start/stop/status, sshd-autostart on|off):
+  # declarative flags and store paths, imperative user-controlled startup.
+  ++ (import ./sshd-tools.nix { inherit pkgs; });
 
   # The launcher's stock fish config: Material You palette exports, eza/zoxide
   # wrappers, yazi `y` helper, oh-my-posh init. Identical file to the apt

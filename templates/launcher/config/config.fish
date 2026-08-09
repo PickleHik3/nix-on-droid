@@ -145,6 +145,11 @@ end
 #   test -r ~/.config/fish/secrets.fish; and source ~/.config/fish/secrets.fish
 
 if status is-interactive
+    # Nix edition: start the declarative sshd only when armed via `sshd-autostart on`.
+    if test -e ~/.config/sshd/autostart; and type -q sshd-start
+        sshd-start --quiet
+    end
+
     function fish_greeting
         command clear
         __move_cursor_to_bottom
