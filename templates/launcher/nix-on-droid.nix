@@ -24,6 +24,12 @@
     termux-wake-unlock.enable = true;
   };
 
+  # The wiki's everyday commands (nix profile, nix search, nix run) and the
+  # flake-based switch all need these; the bare bootstrap leaves them off.
+  nix.extraOptions = ''
+    experimental-features = nix-command flakes
+  '';
+
   # Read the changelog before changing this value.
   system.stateVersion = "26.05";
 }
