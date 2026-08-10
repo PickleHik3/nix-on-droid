@@ -65,6 +65,12 @@
       $DRY_RUN_CMD ${pkgs.git}/bin/git clone --depth=1 \
         https://github.com/LazyVim/starter "${config.xdg.configHome}/nvim"
       $DRY_RUN_CMD rm -rf "${config.xdg.configHome}/nvim/.git"
+      # Nothing in the starter needs luarocks — lazy.nvim says as much in its
+      # own health check — but with rocks left on it still wants to build
+      # hererocks on the phone, and reports an error until it does.
+      $DRY_RUN_CMD ${pkgs.gnused}/bin/sed -i \
+        's|^  install = { colorscheme|  rocks = { enabled = false },\n  install = { colorscheme|' \
+        "${config.xdg.configHome}/nvim/lua/config/lazy.lua"
     fi
   '';
 
