@@ -91,7 +91,7 @@ writeText "login-inner" ''
           do
               if [[ $p =~ (.*)github:NixOS/nixpkgs.*\"\; ]]; then
                   printf "''${BASH_REMATCH[1]}${config.build.flake.nixpkgs}\";\n" "$p"
-              elif [[ $p =~ (.*)github:nix-community/nix-on-droid.*\"\; ]]; then
+              elif [[ $p =~ (.*)github:[^/[:space:]]+/nix-on-droid[^\"\;]*\"\; ]]; then
                   printf "''${BASH_REMATCH[1]}${config.build.flake.nix-on-droid}\";\n" "$p"
               else
                   printf '%s\n' "$p"
