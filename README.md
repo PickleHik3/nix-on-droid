@@ -1,20 +1,19 @@
 # Nix-on-Droid
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-    alt="Get it on F-Droid"
-    height="80">](https://f-droid.org/packages/com.termux.nix)
-
 Nix package manager on Android, in a single-click installable package. This is
 not full [NixOS](https://nixos.org/) running inside Android, but you get easy
 access to [nixpkgs](https://github.com/NixOS/nixpkgs)' vast collection of
 (precompiled!) software and the best package manager under the sun. It's
 prototype-grade quality as of now, but hey, it works!
 
+This repository is the Nix backend for the Nix edition of
+[termux-launcher](https://github.com/PickleHik3/termux-launcher). It is a fork
+of [nix-community/nix-on-droid](https://github.com/nix-community/nix-on-droid),
+whose contributors created and maintain the upstream project.
+
 It does not require root, user namespaces support or disabling SELinux,
 but it relies on `proot` and other hacks instead.
-It uses [a fork](https://github.com/nix-community/nix-on-droid-app)
-of [Termux-the-terminal-emulator app](https://github.com/termux/termux-app),
-but has no relation to [Termux-the-distro](https://termux.com/).
+It has no relation to [Termux-the-distro](https://termux.com/).
 Please do not pester Termux folks about Nix-on-Droid.
 
 This repository contains:
@@ -35,9 +34,17 @@ and it's not an easy feat to pull off.
 
 ## Try it out
 
-[Install it from F-Droid](https://f-droid.org/packages/com.termux.nix),
-launch the app, press OK,
-expect many hundreds megabytes of downloads to happen.
+Download and install the Nix edition launcher APK attached to a `vX.Y.Z-nix`
+tag on the [termux-launcher releases page](https://github.com/PickleHik3/termux-launcher/releases).
+Launch the app, press OK, and expect many hundreds of megabytes of downloads.
+
+### Differences from upstream
+
+* Android package prefix `com.termux.launcher.nix`.
+* Nix-on-Droid defaults repointed to this fork.
+* `curl` and `gnused` included in the base environment.
+* Patched `proot` with `termios2` ioctl translation.
+* Optional `#launcher` template with fish, Home Manager, and `sshd` on port 8023.
 
 
 ## Nix-on-Droid and the module system
@@ -53,7 +60,7 @@ for example:
 
 {
   environment.packages = [ pkgs.vim ];
-  system.stateVersion = "24.05";
+  system.stateVersion = "26.05";
 }
 ```
 
@@ -67,7 +74,7 @@ An alternative location is `~/.config/nixpkgs/config.nix` with the key
 
     {
       environment.packages = [ pkgs.vim ];
-      system.stateVersion = "24.05";
+      system.stateVersion = "26.05";
     };
 }
 ```
@@ -80,7 +87,7 @@ To enable `home-manager` you simply need to follow the instructions already prov
 
 1.  Add `home-manager` channel:
     ```sh
-    nix-channel --add https://github.com/nix-community/home-manager/archive/release-24.05.tar.gz home-manager
+    nix-channel --add https://github.com/nix-community/home-manager/archive/release-26.05.tar.gz home-manager
     nix-channel --update
     ```
 2.  Configure `home-manager`:
@@ -89,7 +96,7 @@ To enable `home-manager` you simply need to follow the instructions already prov
 
     {
       # Read Nix-on-Droid changelog before changing this value
-      system.stateVersion = "24.05";
+      system.stateVersion = "26.05";
 
       # insert Nix-on-Droid config
 
@@ -97,7 +104,7 @@ To enable `home-manager` you simply need to follow the instructions already prov
         { pkgs, ... }:
         {
           # Read home-manager changelog before changing this value
-          home.stateVersion = "24.05";
+          home.stateVersion = "26.05";
 
           # insert home-manager config
         };
@@ -118,8 +125,8 @@ For more information, please run `nix-on-droid help`.
 
 ## Build Nix-on-Droid on your own
 
-The [terminal emulator part](https://github.com/nix-community/nix-on-droid-app)
-is probably not interesting for you, just download and use a prebuilt one.
+The [Android app](https://github.com/PickleHik3/termux-launcher)
+is probably not interesting for you; just download and use a prebuilt APK.
 If you really want to rebuild it, you can just use Android Studio for that.
 
 The zipball generation is probably what you are after.
@@ -188,10 +195,10 @@ A minimal example could look like the following:
   description = "Minimal example of Nix-on-Droid system config.";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     nix-on-droid = {
-      url = "github:nix-community/nix-on-droid/release-24.05";
+      url = "github:PickleHik3/nix-on-droid/launcher-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -210,7 +217,7 @@ A minimal example could look like the following:
 For more examples and nix flake templates, see [`templates`](./templates) directory or explore with:
 
 ```sh
-nix flake init --template github:nix-community/nix-on-droid#advanced
+nix flake init --template github:PickleHik3/nix-on-droid/launcher-nix#advanced
 ```
 
 ### Usage with `nix-on-droid`
@@ -284,9 +291,10 @@ Two rewrites ago it was based off the official Nix install script
 (https://nixos.org/nix/install),
 presumably written by Eelco Dolstra.
 
-Is deployed and used with [a fork](https://github.com/nix-community/nix-on-droid-app)
-of [Termux-the-terminal-emulator app](https://github.com/termux/termux-app),
-but has no relation to Termux-the-distro.
+Is deployed and used with the Nix edition of
+[termux-launcher](https://github.com/PickleHik3/termux-launcher), which is based
+on [Termux-the-terminal-emulator app](https://github.com/termux/termux-app), but
+has no relation to Termux-the-distro.
 
 Previous project that did use Termux-the-distro:
 https://github.com/t184256/nix-in-termux

@@ -10,11 +10,16 @@
  <preface>
   <title>Preface</title>
   <para>
-   Some basic documentation of Nix-on-Droid.
+   Some basic documentation of the termux-launcher Nix edition. This repository
+   is a fork of <link xlink:href="https://github.com/nix-community/nix-on-droid">nix-community/nix-on-droid</link>.
+  </para>
+  <para>
+   Install the Nix edition launcher APK attached to a <literal>vX.Y.Z-nix</literal>
+   tag on the <link xlink:href="https://github.com/PickleHik3/termux-launcher/releases">termux-launcher releases page</link>.
   </para>
   <para>
    If you encounter problems or bugs then please report them on the
-   <link xlink:href="https://github.com/nix-community/nix-on-droid/issues">issue tracker</link>.
+   <link xlink:href="https://github.com/PickleHik3/nix-on-droid/issues">issue tracker</link>.
   </para>
  </preface>
 
@@ -31,10 +36,10 @@
 <programlisting language="nix">
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     nix-on-droid = {
-      url = "github:nix-community/nix-on-droid/release-24.05";
+      url = "github:PickleHik3/nix-on-droid/launcher-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
