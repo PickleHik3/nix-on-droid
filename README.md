@@ -38,6 +38,10 @@ Download and install the Nix edition launcher APK attached to a `vX.Y.Z-nix`
 tag on the [termux-launcher releases page](https://github.com/PickleHik3/termux-launcher/releases).
 Launch the app, press OK, and expect many hundreds of megabytes of downloads.
 
+Optional companion apps (shared signing key and package family — the F-Droid
+add-ons will not pair): [TLNix:API](https://github.com/PickleHik3/termux-api/releases/tag/nix-v0.53.1)
+and [TLNix:Styling](https://github.com/PickleHik3/termux-styling/releases/tag/nix-v0.32.2).
+
 ### Differences from upstream
 
 * Android package prefix `com.termux.launcher.nix`.
