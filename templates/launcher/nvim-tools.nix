@@ -163,8 +163,11 @@ in
       5) quit
 
 MENU
-      printf 'Choice [1-5]: '
+      # Enter takes NvChad: it is what the template used to install automatically
+      # (as LazyVim), and it is the one wired to the wallpaper colourscheme.
+      printf 'Choice [1-5, default 1]: '
       read -r choice
+      [ -n "$choice" ] || choice=1
       case "$choice" in
         1) distro=nvchad ;;
         2) distro=lazyvim ;;
