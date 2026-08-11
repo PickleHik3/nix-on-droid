@@ -105,6 +105,15 @@ function clear
 end
 
 if status is-interactive
+    # Mention the Neovim chooser once, only while no config exists. Not a prompt:
+    # a question on every new shell would be worse than no question at all.
+    set -l __tl_config_home (test -n "$XDG_CONFIG_HOME"; and echo "$XDG_CONFIG_HOME"; or echo "$HOME/.config")
+    if type -q setup-nvim; and not test -e "$__tl_config_home/nvim"; and not test -e "$__tl_config_home/.setup-nvim-hinted"
+        echo "Neovim has no config yet — run 'setup-nvim' to pick one (NvChad, LazyVim, kickstart, or stock)."
+        touch "$__tl_config_home/.setup-nvim-hinted"
+    end
+    set -e __tl_config_home
+
     function fish_greeting
         command clear
         __move_cursor_to_bottom

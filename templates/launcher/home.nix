@@ -19,15 +19,15 @@
     fastfetch
     timg
     chafa
-    # LazyVim toolchain: treesitter compiles grammars with cc, lazy.nvim
-    # clones plugins with git, telescope wants rg/fd (above).
-    # The rest of this block is what `:checkhealth lazyvim` asks for on a
-    # fresh install: the tree-sitter CLI (an outright error without it),
-    # fzf and lazygit for the pickers and the git keymap, python3 so
-    # lazy.nvim's hererocks can build luarocks when a plugin needs it, and
-    # imagemagick so snacks.image can render more than plain PNGs over the
-    # launcher's kitty graphics support. Drop imagemagick if you want the
-    # smaller closure — image previews degrade rather than break.
+    # Neovim toolchain, enough for any of the setups `setup-nvim` offers:
+    # treesitter compiles grammars with cc, plugin managers clone with git,
+    # pickers want rg/fd (above). The rest is what the distro health checks ask
+    # for on a fresh install: the tree-sitter CLI (an outright error without it),
+    # fzf and lazygit for the pickers and the git keymap, python3 for plugins
+    # that build luarocks through hererocks, and imagemagick so image previews
+    # render more than plain PNGs over the launcher's kitty graphics support.
+    # Drop imagemagick if you want the smaller closure — previews degrade
+    # rather than break.
     neovim
     gcc
     gnumake
@@ -40,7 +40,10 @@
   ]
   # sshd lifecycle commands (sshd-start/stop/status, sshd-autostart on|off):
   # declarative flags and store paths, imperative user-controlled startup.
-  ++ (import ./sshd-tools.nix { inherit pkgs; });
+  ++ (import ./sshd-tools.nix { inherit pkgs; })
+  # `setup-nvim`: choose a Neovim setup (NvChad / LazyVim / kickstart / stock) and
+  # wire in the launcher integrations. Nothing is installed until you run it.
+  ++ (import ./nvim-tools.nix { inherit pkgs; });
 
   # The launcher's own fish config: Material You palette exports, PATH to
   # launcherctl/tai, oh-my-posh init. Read-only (a store symlink) by design —
@@ -70,21 +73,12 @@
   # text output while the file is missing.
   xdg.configFile."fastfetch/config.jsonc".source = ./config/fastfetch/config.jsonc;
 
-  # LazyVim starter, cloned once on first activation. ~/.config/nvim stays
-  # yours afterwards — this never overwrites an existing config.
-  home.activation.lazyvim = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    if [ ! -e "${config.xdg.configHome}/nvim" ]; then
-      $DRY_RUN_CMD ${pkgs.git}/bin/git clone --depth=1 \
-        https://github.com/LazyVim/starter "${config.xdg.configHome}/nvim"
-      $DRY_RUN_CMD rm -rf "${config.xdg.configHome}/nvim/.git"
-      # Nothing in the starter needs luarocks — lazy.nvim says as much in its
-      # own health check — but with rocks left on it still wants to build
-      # hererocks on the phone, and reports an error until it does.
-      $DRY_RUN_CMD ${pkgs.gnused}/bin/sed -i \
-        's|^  install = { colorscheme|  rocks = { enabled = false },\n  install = { colorscheme|' \
-        "${config.xdg.configHome}/nvim/lua/config/lazy.lua"
-    fi
-  '';
+  # No Neovim config is installed automatically. Earlier revisions cloned the
+  # LazyVim starter here, which picked a fairly opinionated distro on the user's
+  # behalf; `setup-nvim` asks instead, and can install alongside an existing
+  # config under NVIM_APPNAME. Anyone who already has ~/.config/nvim keeps it
+  # untouched — the old hook skipped existing configs too, so switching to the
+  # chooser changes nothing for them.
 
   # `gx` in neovim, and anything else that shells out to xdg-open, has no
   # handler inside the proot. Android already has one — hand the URL to
