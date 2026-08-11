@@ -1,0 +1,64 @@
+--- a/src/execve/exit.c
++++ b/src/execve/exit.c
+@@ -138,6 +138,51 @@
+ }
+ 
+ /**
++ * Return the address the program header table will live at, once
++ * @load_info's mappings are in place.
++ *
++ * The program headers are only guaranteed to be mapped by the PT_LOAD
++ * segment whose file range covers e_phoff, and that is not necessarily
++ * the first one listed: Bun's single-file executables, for instance,
++ * list the appended data segment before the segment that holds the ELF
++ * header, and their segments are neither sorted by p_vaddr nor share a
++ * single p_vaddr - p_offset bias.  Deriving AT_PHDR from mappings[0]
++ * then points the loader at whatever happens to come first -- for those
++ * binaries, into the appended payload -- where it finds no PT_INTERP and
++ * aborts with "inconsistency detected by ld.so: rtld.c: ...: assertion
++ * `_dl_rtld_map.l_libname' failed!".
++ *
++ * Linux resolves AT_PHDR against the covering segment instead (e_phoff -
++ * p_offset + p_vaddr, see load_elf_binary() in fs/binfmt_elf.c), so do
++ * the same.  Anonymous mappings are skipped: they carry offset 0 for the
++ * zero-filled tail of a segment, not a file range.  Falling back to the
++ * old computation keeps behaviour unchanged for anything that does not
++ * map e_phoff at all.
++ */
++static word_t phdr_address(const LoadInfo *load_info)
++{
++	word_t phoff = ELF_FIELD(load_info->elf_header, phoff);
++	size_t nb_mappings = talloc_array_length(load_info->mappings);
++	size_t i;
++
++	if (nb_mappings == 0)
++		return phoff;
++
++	for (i = 0; i < nb_mappings; i++) {
++		const Mapping *mapping = &load_info->mappings[i];
++
++		if ((mapping->flags & MAP_ANONYMOUS) != 0)
++			continue;
++
++		if (phoff >= mapping->offset
++		    && phoff - mapping->offset < mapping->length)
++			return mapping->addr + (phoff - mapping->offset);
++	}
++
++	return phoff + load_info->mappings[0].addr;
++}
++
++/**
+  * Convert @mappings into load @script statements at the given @cursor
+  * position.  This function returns the new cursor position.
+  */
+@@ -306,8 +351,7 @@
+ 	statement->start.at_phent = ELF_FIELD(tracee->load_info->elf_header, phentsize);
+ 	statement->start.at_phnum = ELF_FIELD(tracee->load_info->elf_header, phnum);
+ 	statement->start.at_entry = ELF_FIELD(tracee->load_info->elf_header, entry);
+-	statement->start.at_phdr  = ELF_FIELD(tracee->load_info->elf_header, phoff)
+-				  + tracee->load_info->mappings[0].addr;
++	statement->start.at_phdr  = phdr_address(tracee->load_info);
+ 	statement->start.at_execfn = string3_address;
+ 
+ 	cursor += LOAD_STATEMENT_SIZE(*statement, start);
