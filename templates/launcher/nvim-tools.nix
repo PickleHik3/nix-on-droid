@@ -4,22 +4,24 @@
 # say so in as many words.
 #
 #   setup-nvim                          interactive menu
-#   setup-nvim --distro nvchad          non-interactive
-#   setup-nvim --distro nvchad --appname nvchad
+#   setup-nvim --distro astronvim       non-interactive
+#   setup-nvim --distro astronvim --appname astronvim
 #                                       install side by side, launch with
-#                                       NVIM_APPNAME=nvchad nvim
-#   setup-nvim --integrations-only      just clipboard + wrap (+ theme if base46)
+#                                       NVIM_APPNAME=astronvim nvim
+#   setup-nvim --integrations-only      just clipboard + wrap (+ theme where supported)
 #
 # What "integrations" means: OSC 52 clipboard so yanks reach the Android clipboard,
-# always-on line wrap for a phone-width screen, and — on NvChad, whose base46 themes
-# are plain Lua tables — a colourscheme generated from the launcher's wallpaper
-# palette that retints live when the wallpaper changes.
+# always-on line wrap for a phone-width screen, and — on AstroNvim and NvChad — a
+# colourscheme generated from the launcher's wallpaper palette that retints live when
+# the wallpaper changes.
 { pkgs }:
 let
   # Shipped Lua, copied into the chosen config so it survives without this flake.
   materialPalette = ./config/nvim/material_palette.lua;
   integrations = ./config/nvim/integrations.lua;
   themeMaterial = ./config/nvim/theme-material.lua;
+  astroColorsMaterial = ./config/nvim/astro-colors-material.lua;
+  astroPluginMaterial = ./config/nvim/astro-plugin-material.lua;
 
   git = "${pkgs.git}/bin/git";
   sed = "${pkgs.gnused}/bin/sed";
@@ -40,7 +42,7 @@ in
         --integrations-only) integrations_only=1; shift ;;
         --yes|-y) assume_yes=1; shift ;;
         -h|--help)
-          echo "usage: setup-nvim [--distro nvchad|lazyvim|kickstart|stock]"
+          echo "usage: setup-nvim [--distro astronvim|nvchad|lazyvim|kickstart|stock]"
           echo "                  [--appname NAME] [--integrations-only] [--yes]"
           exit 0 ;;
         *) echo "setup-nvim: unknown option '$1'" >&2; exit 2 ;;
@@ -95,6 +97,23 @@ in
       rm -rf "$target/.git"
     }
 
+    # AstroNvim has no base46, so the palette drives base16-nvim through a
+    # colors/material.lua, plus explicit chrome, heirline mode and git-sign groups:
+    # AstroNvim resolves its statusline colours from highlight groups, and anything
+    # left undefined silently falls back to its stock theme.
+    install_astronvim() {
+      clone https://github.com/AstroNvim/template
+      install_integrations
+      mkdir -p "$target/colors" "$target/lua/plugins"
+      [ -e "$target/colors/material.lua" ] || cp "${astroColorsMaterial}" "$target/colors/material.lua"
+      [ -e "$target/lua/plugins/material.lua" ] || cp "${astroPluginMaterial}" "$target/lua/plugins/material.lua"
+      chmod u+w "$target/colors/material.lua" "$target/lua/plugins/material.lua"
+      hook_integrations "$target/init.lua"
+      echo "AstroNvim installed. Keybind hints: <leader> shows the which-key menu."
+      echo "Colourscheme follows your wallpaper; :MaterialThemeInfo shows how it was built,"
+      echo "and :MaterialTransparent toggles a transparent background."
+    }
+
     install_nvchad() {
       clone https://github.com/NvChad/starter
       install_integrations
@@ -143,6 +162,8 @@ in
       if [ -e "$target/lua/chadrc.lua" ]; then
         install_material_theme
         hook_integrations "$target/lua/options.lua"
+      elif [ -e "$target/lua/plugins/astrocore.lua" ]; then
+        hook_integrations "$target/init.lua"
       elif [ -e "$target/lua/config/options.lua" ]; then
         hook_integrations "$target/lua/config/options.lua"
       else
@@ -156,23 +177,25 @@ in
       cat <<'MENU'
     Neovim setup
 
-      1) NvChad     + wallpaper-matched colourscheme, searchable cheatsheet (<leader>ch)
-      2) LazyVim    batteries included, many plugins
-      3) kickstart  one readable init.lua you own and edit
-      4) stock      no distro; just clipboard + line wrap
-      5) quit
+      1) AstroNvim  + wallpaper-matched colourscheme, which-key hints
+      2) NvChad     + wallpaper-matched colourscheme, searchable cheatsheet (<leader>ch)
+      3) LazyVim    batteries included, many plugins
+      4) kickstart  one readable init.lua you own and edit
+      5) stock      no distro; just clipboard + line wrap
+      6) quit
 
 MENU
-      # Enter takes NvChad: it is what the template used to install automatically
-      # (as LazyVim), and it is the one wired to the wallpaper colourscheme.
-      printf 'Choice [1-5, default 1]: '
+      # Enter takes AstroNvim: wallpaper colourscheme plus which-key hints out of
+      # the box, which is the friendliest default for someone who has not chosen.
+      printf 'Choice [1-6, default 1]: '
       read -r choice
       [ -n "$choice" ] || choice=1
       case "$choice" in
-        1) distro=nvchad ;;
-        2) distro=lazyvim ;;
-        3) distro=kickstart ;;
-        4) distro=stock ;;
+        1) distro=astronvim ;;
+        2) distro=nvchad ;;
+        3) distro=lazyvim ;;
+        4) distro=kickstart ;;
+        5) distro=stock ;;
         *) echo "Nothing changed."; exit 0 ;;
       esac
     fi
@@ -217,6 +240,7 @@ EXISTS
     fi
 
     case "$distro" in
+      astronvim) install_astronvim ;;
       nvchad) install_nvchad ;;
       lazyvim) install_lazyvim ;;
       kickstart) install_kickstart ;;
