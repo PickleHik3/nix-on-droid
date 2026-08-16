@@ -152,7 +152,7 @@
 
         launcher = {
           path = ./templates/launcher;
-          description = "Termux Launcher opinionated shell: fish, oh-my-posh, LazyVim, eza, zoxide, yazi, fastfetch, timg.";
+          description = "Termux Launcher opinionated shell: fish, oh-my-posh, eza, zoxide, yazi, fastfetch, neovim, plus a setup-toolkits checklist for node/go/python and build tools.";
         };
 
         advanced = {

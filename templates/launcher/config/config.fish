@@ -23,6 +23,12 @@ set -q COLORTERM; or set -gx COLORTERM truecolor
 
 fish_add_path "$HOME/.local/bin" "$HOME/.termux/bin"
 
+# Where each package manager's global installs land. These live in $HOME rather
+# than in the nix profile because the profile is a read-only store path that the
+# next switch replaces: npm -g, go install and uv tool install all need a
+# writable prefix that survives switches, rollbacks and garbage collection.
+fish_add_path "$HOME/.npm-global/bin" "$HOME/go/bin"
+
 # Nix edition: launcherctl/tai live in the proot /bin, which the generated
 # PATH does not include. Append (not prepend) so nix binaries keep priority.
 test -d /nix; and fish_add_path --append /bin
@@ -108,6 +114,14 @@ if status is-interactive
     # Mention the Neovim chooser once, only while no config exists. Not a prompt:
     # a question on every new shell would be worse than no question at all.
     set -l __tl_config_home (test -n "$XDG_CONFIG_HOME"; and echo "$XDG_CONFIG_HOME"; or echo "$HOME/.config")
+
+    # Same idea for the toolkit checklist: said once, on the first shell after
+    # the template's first switch, then never again.
+    if type -q setup-toolkits; and not test -e "$__tl_config_home/.setup-toolkits-hinted"
+        echo "Pick what this environment installs — 'setup-toolkits' (shell, editor, build tools, node, go, python)."
+        touch "$__tl_config_home/.setup-toolkits-hinted"
+    end
+
     if type -q setup-nvim; and not test -e "$__tl_config_home/nvim"; and not test -e "$__tl_config_home/.setup-nvim-hinted"
         echo "Neovim has no config yet — run 'setup-nvim' to pick one (NvChad, LazyVim, kickstart, or stock)."
         touch "$__tl_config_home/.setup-nvim-hinted"
