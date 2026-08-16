@@ -51,7 +51,9 @@ and [TLNix:Styling](https://github.com/PickleHik3/termux-styling/releases/tag/ni
 * Optional `#launcher` template with fish, Home Manager, and `sshd` on port 8023.
 * `#launcher` groups its packages in `toolkits.nix`, with a `setup-toolkits`
   checklist (shell, eye candy, editor, build toolchain, node, go, python) and
-  `$HOME`-based global prefixes for npm, go and uv.
+  `$HOME`-based global prefixes for npm, go and uv. One-off packages go in the
+  commented `extraPackages` list in `home.nix`, and the fish greeting says so
+  when a `.nix` file in the flake directory is newer than the last switch.
 
 
 ## Nix-on-Droid and the module system

@@ -126,6 +126,29 @@ if status is-interactive
         echo "Neovim has no config yet — run 'setup-nvim' to pick one (NvChad, LazyVim, kickstart, or stock)."
         touch "$__tl_config_home/.setup-nvim-hinted"
     end
+
+    # Saving a .nix file changes nothing on its own — a switch is what builds and
+    # activates it. "I edited it and nothing happened" is this edition's classic
+    # first hour, so compare the flake's files against the profile symlink, whose
+    # mtime is the last switch. Store paths all carry a 1970 mtime, hence `stat`
+    # on the link itself rather than test -nt, which would follow it and always
+    # fire. Says nothing when the profile is missing or stat is unavailable.
+    set -l __tl_profile /nix/var/nix/profiles/nix-on-droid
+    set -l __tl_flake (test -n "$NIX_ON_DROID_FLAKE_DIR"; and echo "$NIX_ON_DROID_FLAKE_DIR"; or echo "$__tl_config_home/nix-on-droid")
+    if type -q stat; and test -L "$__tl_profile"; and test -d "$__tl_flake"
+        set -l __tl_switched (stat -c %Y "$__tl_profile" 2>/dev/null)
+        if string match -rq '^[0-9]+$' -- "$__tl_switched"
+            for __tl_file in $__tl_flake/*.nix
+                set -l __tl_edited (stat -c %Y "$__tl_file" 2>/dev/null)
+                if string match -rq '^[0-9]+$' -- "$__tl_edited"; and test "$__tl_edited" -gt "$__tl_switched"
+                    echo "$__tl_flake has changes that are not applied yet — run: nix-on-droid switch --flake $__tl_flake"
+                    break
+                end
+            end
+        end
+    end
+    set -e __tl_profile
+    set -e __tl_flake
     set -e __tl_config_home
 
     function fish_greeting

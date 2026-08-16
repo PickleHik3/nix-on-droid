@@ -75,6 +75,25 @@ let
   nodePackages = with pkgs; [ nodejs ];
   goPackages = with pkgs; [ go ];
   pythonPackages = with pkgs; [ python3 uv ];
+
+  # Anything that does not belong to a toolkit. This is the list to edit for a
+  # one-off: uncomment a line, or add your own, then
+  #
+  #   nix-on-droid switch --flake ~/.config/nix-on-droid
+  #
+  # Names are nixpkgs attribute names — search them with `nix search nixpkgs
+  # <term>`, or on https://search.nixos.org/packages. A name that does not
+  # exist fails the switch by name, and the old environment stays active until
+  # you fix it, so a typo here costs nothing but the error message.
+  extraPackages = with pkgs; [
+    # htop          # process viewer
+    # tmux          # the launcher has its own panes and windows, but tmux still works
+    # jq            # JSON on the command line
+    # wget          # curl is already here
+    # rsync
+    # sqlite
+    # ffmpeg        # large closure
+  ];
 in
 
 {
@@ -86,6 +105,8 @@ in
     ++ lib.optionals toolkits.node nodePackages
     ++ lib.optionals toolkits.go goPackages
     ++ lib.optionals toolkits.python pythonPackages
+    # Your own additions, from the list above. Empty by default.
+    ++ extraPackages
     # sshd lifecycle commands (sshd-start/stop/status, sshd-autostart on|off):
     # declarative flags and store paths, imperative user-controlled startup.
     ++ (import ./sshd-tools.nix { inherit pkgs; })
