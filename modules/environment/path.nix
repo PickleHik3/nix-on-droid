@@ -72,6 +72,9 @@ in
         pkgs.curl # launcherctl/tai CLI clients talk to the launcher API with curl
         pkgs.gnused # launcherctl/tai scripts parse endpoint files and escape JSON with sed
         pkgs.less # since nix tools really want a pager available, #27
+        # `setup-launcher`: installs the launcher flake template and switches, so
+        # the first hour is one command instead of four typed by hand.
+        (import ./setup-launcher.nix { inherit pkgs; })
         config.nix.package
       ];
 
