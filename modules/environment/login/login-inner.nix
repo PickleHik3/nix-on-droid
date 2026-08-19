@@ -30,6 +30,30 @@ writeText "login-inner" ''
       export HOME="${config.user.home}"
       export USER="${config.user.userName}"
 
+      # Every step below runs under `set -e`, so one failing nix command - a dropped network
+      # during the ~200MiB fetch being the usual one - ends this script, and with it the
+      # terminal session and the app around it, without ever printing why. Hand the user a
+      # shell and an explanation instead, and leave /etc/UNINTIALISED in place so that the
+      # next launch retries the setup.
+      first_boot_argc=$#
+      nix_on_droid_first_boot_failed() {
+        first_boot_status=$?
+        if [ "$first_boot_status" -ne 0 ]; then
+          trap - EXIT
+          echo
+          echo "Nix-on-Droid setup did not finish (exit status $first_boot_status); see the error above."
+          echo "A dropped network connection is the usual cause. Restart the app to retry the setup."
+          if [ "$first_boot_argc" -eq 0 ]; then
+            echo "Dropping to the bootstrap shell for now."
+            echo
+            exec /usr/bin/env bash
+          fi
+          echo
+          exit "$first_boot_status"
+        fi
+      }
+      trap nix_on_droid_first_boot_failed EXIT
+
       # To prevent gc warnings of nix, see https://github.com/NixOS/nix/issues/3237
       export GC_NPROCS=1
 
@@ -118,6 +142,8 @@ writeText "login-inner" ''
 
       fi
 
+      trap - EXIT
+
       echo
       echo "Congratulations! Now you have Nix installed with some default packages like bashInteractive, \
     coreutils, cacert and, most importantly, Nix-on-Droid itself to manage local configuration, see"
@@ -149,9 +175,14 @@ writeText "login-inner" ''
   else
     echo "User profile is missing or incomplete (a first-time setup may have failed)."
     ${if config.build.initialBuild then ''
-      echo "Re-running the Nix-on-Droid setup..."
-      : > /etc/UNINTIALISED
-      exec /bin/sh /usr/lib/login-inner "$@"
+      # Guarded so a setup that keeps failing cannot bounce this script forever.
+      if [ -z "''${NIX_ON_DROID_SETUP_RETRIED:-}" ]; then
+        echo "Re-running the Nix-on-Droid setup..."
+        export NIX_ON_DROID_SETUP_RETRIED=1
+        : > /etc/UNINTIALISED
+        exec /bin/sh /usr/lib/login-inner "$@"
+      fi
+      echo "The setup was already retried once in this session; run 'nix-on-droid switch' to repair."
     '' else ''
       echo "Continuing with a limited shell; run 'nix-on-droid switch' to repair."
     ''}
