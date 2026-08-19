@@ -23,12 +23,22 @@ let
   astroColorsMaterial = ./config/nvim/astro-colors-material.lua;
   astroPluginMaterial = ./config/nvim/astro-plugin-material.lua;
 
+  # These scripts run under whatever shell the user happens to be in, and the base
+  # environment ships neither coreutils nor grep, so an unqualified `grep` or `tr`
+  # is simply absent right after a first switch. Put what they need on PATH instead
+  # of absolutising every call, and keep the inherited PATH behind it so `nix` and
+  # `nix-on-droid` still resolve.
+  toolPath = ''
+    export PATH="${pkgs.lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep pkgs.gnused ]}:$PATH"
+  '';
+
   git = "${pkgs.git}/bin/git";
   sed = "${pkgs.gnused}/bin/sed";
 in
 [
   (pkgs.writeShellScriptBin "setup-nvim" ''
     set -eu
+    ${toolPath}
 
     distro=""
     appname="nvim"

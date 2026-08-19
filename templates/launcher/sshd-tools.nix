@@ -20,6 +20,15 @@
 let
   runDir = "$HOME/.config/sshd";
   hostKey = "$HOME/.ssh/hostkeys/ssh_host_ed25519_key";
+  # These scripts run under whatever shell the user happens to be in, and the base
+  # environment ships neither coreutils nor grep, so an unqualified `grep` or `tr`
+  # is simply absent right after a first switch. Put what they need on PATH instead
+  # of absolutising every call, and keep the inherited PATH behind it so `nix` and
+  # `nix-on-droid` still resolve.
+  toolPath = ''
+    export PATH="${pkgs.lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep ]}:$PATH"
+  '';
+
   sshd = "${pkgs.openssh}/bin/sshd";
   sshKeygen = "${pkgs.openssh}/bin/ssh-keygen";
 
@@ -59,6 +68,7 @@ let
 in
 [
   (pkgs.writeShellScriptBin "sshd-start" ''
+    ${toolPath}
     ${probeSnippet}
     quiet=false
     [ "$1" = "--quiet" ] && quiet=true
@@ -98,6 +108,7 @@ in
   '')
 
   (pkgs.writeShellScriptBin "sshd-stop" ''
+    ${toolPath}
     ${findPidsSnippet}
     stopped=false
     if [ -f "${runDir}/pid" ] && kill -0 "$(cat "${runDir}/pid")" 2>/dev/null; then
@@ -113,6 +124,7 @@ in
   '')
 
   (pkgs.writeShellScriptBin "sshd-status" ''
+    ${toolPath}
     ${probeSnippet}
     port="$(cat "${runDir}/port" 2>/dev/null || echo 8023)"
     probe "$port"
@@ -133,6 +145,7 @@ in
   '')
 
   (pkgs.writeShellScriptBin "sshd-autostart" ''
+    ${toolPath}
     mkdir -p "${runDir}"
     case "$1" in
       on)  touch "${runDir}/autostart"; echo "autostart armed" ;;

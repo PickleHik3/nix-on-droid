@@ -20,6 +20,10 @@
 
 pkgs.writeShellScriptBin "setup-launcher" ''
   set -eu
+  # The base environment ships no coreutils, so `date` and `mv` are not on PATH by
+  # themselves. Keep the inherited PATH behind ours: `nix` and `nix-on-droid` are
+  # the whole point of this script and have to come from the user's environment.
+  export PATH="${pkgs.lib.makeBinPath [ pkgs.coreutils ]}:$PATH"
 
   template="github:PickleHik3/nix-on-droid/launcher-nix#launcher"
   config_home="''${XDG_CONFIG_HOME:-$HOME/.config}"

@@ -19,11 +19,21 @@
 { pkgs }:
 
 let
+  # These scripts run under whatever shell the user happens to be in, and the base
+  # environment ships neither coreutils nor grep, so an unqualified `grep` or `tr`
+  # is simply absent right after a first switch. Put what they need on PATH instead
+  # of absolutising every call, and keep the inherited PATH behind it so `nix` and
+  # `nix-on-droid` still resolve.
+  toolPath = ''
+    export PATH="${pkgs.lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep pkgs.gnused ]}:$PATH"
+  '';
+
   sed = "${pkgs.gnused}/bin/sed";
 in
 [
   (pkgs.writeShellScriptBin "setup-toolkits" ''
     set -eu
+    ${toolPath}
 
     config_home="''${XDG_CONFIG_HOME:-$HOME/.config}"
     flake_dir="''${NIX_ON_DROID_FLAKE_DIR:-$config_home/nix-on-droid}"
