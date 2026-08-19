@@ -9,12 +9,19 @@ let
   # group cannot stand without a compiler.
   wantBuild = toolkits.build || toolkits.editor;
 
+  # Installed whatever the toolkits say: fish is the login shell either way (see
+  # nix-on-droid.nix), and its shipped config reaches for clear/tput on every
+  # greeting. Gating these behind the shell toolkit left a bare `shell = false`
+  # environment erroring on each new prompt.
+  basePackages = with pkgs; [
+    ncurses # clear/tput for the fish greeting and cursor helpers
+  ];
+
   # Shell, prompt, navigation. The shipped fish config guards every block with
   # `type -q`, so removing a package here degrades gracefully.
   shellPackages = with pkgs; [
     fish
     oh-my-posh
-    ncurses # clear/tput for the fish greeting and cursor helpers
     eza
     zoxide
     yazi
@@ -98,7 +105,8 @@ in
 
 {
   home.packages =
-    lib.optionals toolkits.shell shellPackages
+    basePackages
+    ++ lib.optionals toolkits.shell shellPackages
     ++ lib.optionals toolkits.eyeCandy eyeCandyPackages
     ++ lib.optionals toolkits.editor editorPackages
     ++ lib.optionals wantBuild buildPackages

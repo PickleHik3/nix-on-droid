@@ -105,8 +105,20 @@ function __move_cursor_to_bottom
     end
 end
 
+# `clear` comes from ncurses, and fish stays the login shell even with the shell
+# toolkit switched off, so it can genuinely be absent. `command -q` rather than
+# `type -q`, because the function below shadows the name. The fallback writes what
+# clear writes: home the cursor, erase the screen, drop the scrollback.
+function __tl_clear_screen
+    if command -q clear
+        command clear
+    else
+        printf '\033[H\033[2J\033[3J'
+    end
+end
+
 function clear
-    command clear
+    __tl_clear_screen
     __move_cursor_to_bottom
 end
 
@@ -152,7 +164,7 @@ if status is-interactive
     set -e __tl_config_home
 
     function fish_greeting
-        command clear
+        __tl_clear_screen
         __move_cursor_to_bottom
     end
 
