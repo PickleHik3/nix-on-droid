@@ -9,7 +9,7 @@
 
 stdenv.mkDerivation {
   pname = "proot-termux";
-  version = "unstable-2026-08-15";
+  version = "5.1.107.91-launcher";
 
   src = fetchFromGitHub {
     repo = "proot";
@@ -34,6 +34,14 @@ stdenv.mkDerivation {
       '#define HAS_LOADER_32BIT true' \
       ""
     ! (grep -F '#define HAS_LOADER_32BIT' src/arch.h)
+
+    # The tarball has no .git, so the makefile's git-describe stamping never
+    # runs and every build reports the ancient proot.h fallback "5.1.0".
+    # Stamp the real termux release plus a marker for the launcher patches.
+    substituteInPlace src/cli/proot.h --replace \
+      '#define VERSION "5.1.0"' \
+      '#define VERSION "5.1.107.91-launcher"'
+    grep -F '#define VERSION "5.1.107.91-launcher"' src/cli/proot.h
   '';
   buildInputs = [ talloc ];
   patches = [
