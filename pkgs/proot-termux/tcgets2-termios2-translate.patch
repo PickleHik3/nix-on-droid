@@ -1,8 +1,8 @@
 diff --git a/src/syscall/enter.c b/src/syscall/enter.c
-index 1b382a7..7930f86 100644
+index 93f4306..f9248a6 100644
 --- a/src/syscall/enter.c
 +++ b/src/syscall/enter.c
-@@ -37,6 +37,7 @@
+@@ -67,6 +67,7 @@
  #include "ptrace/ptrace.h"
  #include "ptrace/wait.h"
  #include "syscall/heap.h"
@@ -10,43 +10,39 @@ index 1b382a7..7930f86 100644
  #include "extension/extension.h"
  #include "execve/execve.h"
  #include "tracee/tracee.h"
-@@ -611,12 +612,75 @@ int translate_syscall_enter(Tracee *tracee)
- 		break;
+@@ -2791,20 +2792,67 @@ int translate_syscall_enter(Tracee *tracee)
  
  #ifdef __ANDROID__
--	case PR_ioctl:
-+	case PR_ioctl: {
-+		word_t request = peek_reg(tracee, CURRENT, SYSARG_2);
-+
  		/* Using literal value because Termux build system patches TCSAFLUSH */
--		if (peek_reg(tracee, CURRENT, SYSARG_2) == TCSETS + 2 /* + TCSAFLUSH */) {
-+		if (request == TCSETS + 2 /* + TCSAFLUSH */) {
+-		if (cmd == TCSETS + 2 /* + TCSAFLUSH */)
++		if (cmd == TCSETS + 2 /* + TCSAFLUSH */) {
  			poke_reg(tracee, SYSARG_2, TCSETS + TCSANOW);
 +			break;
 +		}
 +
 +		/* See termios2.h: Android SELinux denies the termios2
 +		 * ioctls on application ptys; translate them to the
-+		 * legacy ones.  */
-+		if (request == PROOT_TCGETS2) {
++		 * legacy ones, converting the structs rather than only
++		 * swapping the request number — the layouts differ.  */
++		if (cmd == PROOT_TCGETS2) {
 +			/* The struct is expanded during sysexit.  */
 +			poke_reg(tracee, SYSARG_2, PROOT_TCGETS);
 +			break;
 +		}
 +
-+		if (request == PROOT_TCSETS2
-+		    || request == PROOT_TCSETSW2
-+		    || request == PROOT_TCSETSF2) {
++		if (cmd == PROOT_TCSETS2
++		    || cmd == PROOT_TCSETSW2
++		    || cmd == PROOT_TCSETSF2) {
 +			struct proot_ktermios2 termios2;
 +			struct proot_ktermios termios;
 +			word_t address;
 +
-+			status = read_data(tracee, &termios2,
-+					peek_reg(tracee, CURRENT, SYSARG_3),
-+					sizeof(termios2));
++			status = read_data(tracee, &termios2, arg, sizeof(termios2));
 +			if (status < 0)
 +				break;
-+
+ 
+-		if (cmd == TCGETS2)
+-			poke_reg(tracee, SYSARG_2, TCGETS);
 +			memset(&termios, 0, sizeof(termios));
 +			termios.c_iflag = termios2.c_iflag;
 +			termios.c_oflag = termios2.c_oflag;
@@ -63,36 +59,39 @@ index 1b382a7..7930f86 100644
 +			}
 +			if ((termios.c_cflag & PROOT_KCIBAUD) == (PROOT_KBOTHER << 16))
 +				termios.c_cflag &= ~PROOT_KCIBAUD; /* = output rate */
-+
+ 
+-		if (cmd == TCSETS2)
+-			poke_reg(tracee, SYSARG_2, TCSETS);
 +			address = alloc_mem(tracee, sizeof(termios));
 +			if (address == 0) {
 +				status = -ENOMEM;
 +				break;
 +			}
-+
+ 
+-		if (cmd == TCSETSW2)
+-			poke_reg(tracee, SYSARG_2, TCSETSW);
 +			status = write_data(tracee, address, &termios, sizeof(termios));
 +			if (status < 0)
 +				break;
-+
+ 
+-		if (cmd == TCSETSF2)
+-			poke_reg(tracee, SYSARG_2, TCSETS);
 +			poke_reg(tracee, SYSARG_3, address);
 +			/* TCSETSF2 is demoted to TCSETS, matching the
 +			 * TCSAFLUSH workaround above.  */
 +			poke_reg(tracee, SYSARG_2,
-+				request == PROOT_TCSETSW2 ? PROOT_TCSETSW
-+							  : PROOT_TCSETS);
++				cmd == PROOT_TCSETSW2 ? PROOT_TCSETSW
++						      : PROOT_TCSETS);
 +			break;
- 		}
-+
- 		break;
-+	}
++		}
  #endif
- 	
- 	case PR_memfd_create:
+ 
+ 		break;
 diff --git a/src/syscall/exit.c b/src/syscall/exit.c
-index df41084..ad8b276 100644
+index 2fe81b0..8b3128c 100644
 --- a/src/syscall/exit.c
 +++ b/src/syscall/exit.c
-@@ -32,6 +32,7 @@
+@@ -35,6 +35,7 @@
  #include "syscall/socket.h"
  #include "syscall/chain.h"
  #include "syscall/heap.h"
@@ -100,7 +99,7 @@ index df41084..ad8b276 100644
  #include "syscall/rlimit.h"
  #include "execve/execve.h"
  #include "tracee/tracee.h"
-@@ -549,6 +550,44 @@ void translate_syscall_exit(Tracee *tracee)
+@@ -737,6 +738,44 @@ void translate_syscall_exit(Tracee *tracee)
  				(int) peek_reg(tracee, CURRENT, SYSARG_RESULT) == -EACCES) {
  			poke_reg(tracee, SYSARG_RESULT, -EOPNOTSUPP);
  		}
@@ -144,7 +143,7 @@ index df41084..ad8b276 100644
 +#endif
  		goto end;
  
- 	default:
+ 	case PR_socket:
 diff --git a/src/syscall/termios2.h b/src/syscall/termios2.h
 new file mode 100644
 index 0000000..8eb0a3e

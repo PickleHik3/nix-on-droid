@@ -1,13 +1,3 @@
-From 7d7479c490de083729253f120a5e9a9c5bd47d0c Mon Sep 17 00:00:00 2001
-From: Florian Wernli <florian.wernli@gmail.com>
-Date: Sat, 14 Mar 2020 17:52:19 +0100
-Subject: [PATCH] detranslate: check for empty path or t_referrer.
- cmpare_paths2: either the asserts or the followed if statement is wrong
-
----
- src/path/path.c | 6 ++----
- 1 file changed, 2 insertions(+), 4 deletions(-)
-
 diff --git a/src/path/path.c b/src/path/path.c
 index d5c9ec6..7a5e398 100644
 --- a/src/path/path.c

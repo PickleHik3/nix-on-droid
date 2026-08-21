@@ -1,9 +1,12 @@
+diff --git a/src/execve/exit.c b/src/execve/exit.c
+index 348a1fd..b6a4a3a 100644
 --- a/src/execve/exit.c
 +++ b/src/execve/exit.c
-@@ -138,6 +138,51 @@
+@@ -137,6 +137,51 @@ static int bind_proc_pid_auxv(const Tracee *ptracee)
+ 	return 0;
  }
  
- /**
++/**
 + * Return the address the program header table will live at, once
 + * @load_info's mappings are in place.
 + *
@@ -48,11 +51,10 @@
 +	return phoff + load_info->mappings[0].addr;
 +}
 +
-+/**
+ /**
   * Convert @mappings into load @script statements at the given @cursor
   * position.  This function returns the new cursor position.
-  */
-@@ -306,8 +351,7 @@
+@@ -319,8 +364,7 @@ static int transfer_load_script(Tracee *tracee)
  	statement->start.at_phent = ELF_FIELD(tracee->load_info->elf_header, phentsize);
  	statement->start.at_phnum = ELF_FIELD(tracee->load_info->elf_header, phnum);
  	statement->start.at_entry = ELF_FIELD(tracee->load_info->elf_header, entry);
