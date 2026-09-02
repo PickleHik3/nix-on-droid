@@ -3,9 +3,10 @@
 # built on the phone, so it stays opt-in.
 final: prev: {
   # fastfetch with the kitty animation-frames patch: the patch decodes GIF
-  # frames through ImageMagick's CoalesceImages and transmits them with the
-  # kitty animation protocol, which the launcher terminal implements. Stock
-  # fastfetch shows the first frame and nothing else.
+  # frames through ImageMagick's CoalesceImages, transmits them with the kitty
+  # animation protocol, and places the logo through Unicode placeholders
+  # (U=1) — both of which the launcher terminal implements. Stock fastfetch
+  # shows the first frame and nothing else.
   fastfetch = prev.fastfetch.overrideAttrs (old: {
     version = "2.67.0";
     src = final.fetchFromGitHub {
